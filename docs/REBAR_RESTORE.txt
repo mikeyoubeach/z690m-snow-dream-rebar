@@ -1,0 +1,73 @@
+REBAR 恢复操作单（2026-09-13 晚）
+=====================================
+
+一、结论（已用数据定性，见文末证据）
+--------------------------------------------------
+1) 刷写本身没问题：当前芯片的 BIOS 区与 v3 镜像【逐字节一致】，
+   注入驱动在位（0x80CA40，GUID 90d10790-…，大小 13366B）。
+2) 安全启动没问题：Secure Boot = 已开启，db = 7636 字节，
+   Windows UEFI CA 2023 / Microsoft UEFI CA 2023 /
+   Option ROM UEFI CA 2023 / KEK 2K CA 2023 【全在】，
+   服务化状态 UEFICA2023Status = Updated、WindowsUEFICA2023Capable = 2。
+   → 之前的证书签名【一直生效】，不用重新注入。
+3) ReBAR 失效的唯一原因：NvStrapsReBar 的【配置变量不存在了】。
+   枚举固件 73 个变量，只有驱动每次开机写的 NvStrapsReBarStatus，
+   没有 NvStrapsReBar（配置）。所以工具显示 Target 空白、
+   UEFI DXE driver status: Unconfigured。
+
+二、为什么会这样
+--------------------------------------------------
+UEFI 变量分两类：
+  * 认证变量：PK / KEK / db / dbx（带 TIME_BASED_AUTHENTICATED_WRITE）
+    → 固件不能凭默认值或刷写删掉它们（删除需要微软签名更新）
+    → 所以刷 BIOS 后 2023 证书【活着】
+  * 普通（第三方）变量：NvStrapsReBar 的配置
+    → 刷写 / 清 CMOS / 载入 BIOS 默认值 → 【被清掉】
+
+旁证 1：原厂镜像 JYZ6PA08_ORIG.bin 全盘 0 处证书，刷完却仍有 4 张 2023 证书
+        → 只能是"认证变量被保留"，不可能是"从默认值恢复"
+旁证 2：固件内建默认库（dbDefault / KEKDefault / PKDefault / dbxDefault）
+        只有 2011 证书（Microsoft Corporation UEFI CA 2011 等），
+        四张 2023 证书一张都没有 → 默认值里根本没有 2023
+
+推论：每次刷 BIOS 之后都要重跑一次 ReBAR 配置，这是必然的，
+      不是出错；证书和 Secure Boot 不需要重做。
+
+三、操作步骤（约 2 分钟 + 2 次重启）
+--------------------------------------------------
+准备：本目录里的 NvStrapsReBar.exe（管理员身份运行）
+
+第 1 步：管理员运行 NvStrapsReBar.exe
+        按 E  （启用 Turing 自动设置）
+        按 S  （保存到固件变量）
+        按 Q 退出，然后【重启】
+
+第 2 步：重启后再次管理员运行 NvStrapsReBar.exe
+        应能看到 UEFI DXE driver status 变成
+        "GPU-side ReBAR Configured …"（说明驱动在安全启动下正常执行）
+        按 P
+        输入 64  （给选中的 GPU 单独配置 PCI 侧 BAR）
+        按 S  （保存）
+        按 Q 退出，然后【重启】
+
+第 3 步：验证
+        nvidia-smi -q -d memory | findstr /C:"BAR1" -A 3
+        期望：Total = 32768 MiB（32 GiB）
+        或 GPU-Z → Resizable BAR = Enabled
+
+四、注意
+--------------------------------------------------
+* 先别进 BIOS 改任何设置：改 BIOS 设置/加载默认值会让 ReBAR 又被自动关闭
+  （官方原文：if you make changes in UEFI Setup, NvStrapsReBar will be
+   disabled automatically and you need to re-enable it.）
+  顺手确认一下 Above 4G Decoding = Enabled、CSM = Disabled 即可，只看不改。
+* 以后每次刷 BIOS / 清 CMOS / 恢复 BIOS 默认值 → 重复第三节。
+* 想临时关掉 ReBAR：管理员运行 → D → S → 重启（改硬件/大改设置前建议先关）。
+* 兜底回退：编程器写回 JYZ6PA08_ORIG.bin。
+
+五、本次取证用到的脚本（都在 jgyu_bios/）
+--------------------------------------------------
+diag_rebar_lost.py     多版本镜像差异 + 注入驱动在位判定
+sb_enum_vars.py        枚举全部固件变量（ntdll 原生 API）
+sb_read_vars2.py       读取关键变量（ReBar 状态 / 默认库）
+flash_now3.bin         本次刷写后的整片回读（16MB）

@@ -1,0 +1,16 @@
+# 固件镜像（体积大、含本机 ME/NVRAM 数据，不分发）
+*.bin
+JYZ6PA08*.bin*
+
+# 厂商刷写包 / 生成产物
+*.exe
+*.zip
+*.rar
+
+# 临时/工作目录
+sfx_*/
+*_ext/
+uefitool/
+received/
+__pycache__/
+*.pyc
