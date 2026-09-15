@@ -24,6 +24,7 @@
 | `scripts/` | 纯 Python 的固件解析／注入／验证工具链（不需要 UEFITool 也能跑） |
 | `tools/` | Windows 端一键脚本：`enable_rebar.bat` / `check_rebar.bat` |
 | `images/` | 实拍图：救砖现场、GPU-Z 验证、发错的夹子 |
+| `bios/` | 我最终刷上并验证可用的那版镜像（整片 16MB，**刷前必读下文**） |
 | `docs/` | 浓缩版文章、ReBAR 恢复操作单 |
 
 ### 关于 NvStrapsReBar.exe（未随仓库分发）
@@ -36,11 +37,45 @@ Windows 端配置工具 `NvStrapsReBar.exe` 属于第三方项目，**本仓库�
 
 下载后放进 `tools/` 目录，`enable_rebar.bat` 即可一键调用。
 
-### 关于 BIOS 镜像
+### 关于 BIOS 镜像（已附带）
 
-本仓库默认**不附带任何完整 BIOS 镜像**（厂商固件版权 + 每块板子的 ME/NVRAM 区域含本机数据）。
+`bios/JYZ6PA08_ReBAR_v3.bin` 就是**我最终刷上、并且逐字节验证过可用的那一份**，整片 16MB。
 
-**推荐做法：用你从精粤官网下载的官方 BIOS，跑 `scripts/` 里的脚本自己生成**，这样得到的镜像才和你自己的板子匹配。
+| 项 | 值 |
+|---|---|
+| 大小 | 16,777,216 字节（16 MB） |
+| MD5 | `4856c9a585a0f27e496cec6428e42a34` |
+| SHA256 | `3a1b903eca781c46e56f5aafde8c0eca793af342f08e6328ff8d9b0ec334a9ba` |
+| 相对原版的改动 | 仅在 `0x80CA40–0x80FF7C` 插入 NvStrapsReBar 驱动（实际改写 13366 字节）；FV 头、卷尺寸、BlockMap、pad file 全部原样不动 |
+
+**⚠️ 刷之前必须知道的三件事**
+
+1. **这是整片镜像，里面包含我那块板子的 ME 区**（`0x1000–0x3D8FFF`，3.83 MB）。
+   整片刷写会**用我的 ME 区覆盖你的** —— 同型号通常能用，但你板子的 ME 运行期数据、PTT 状态会被替换掉。想避免就走下面**命令二**，只写 BIOS 区。
+2. **先把你自己的整片读出来备份**，这是唯一的退路：`fptw64 -d MY_ORIG.bin`
+3. **没有编程器不要刷。** 我这块板子就是刷砖过一次、靠 CH341A + SOP8 夹子才救回来的。
+
+**刷写命令**
+
+```bat
+:: 命令一：整片刷（厂商自带刷写器就是这么做的，也是我用的方式）
+fptw64 -f bios\JYZ6PA08_ReBAR_v3.bin -rewrite
+
+:: 命令二（推荐）：只刷 BIOS 区，不碰 ME 和 Flash Descriptor
+fptw64 -f bios\JYZ6PA08_ReBAR_v3.bin -bios
+```
+
+刷完**先回读比对、再重启**：
+
+```bat
+fptw64 -d after.bin
+python scriptsw_diff.py MY_ORIG.bin after.bin
+```
+
+最后别忘了：**进 BIOS 打开 Above 4G Decoding、关掉 CSM**，然后才轮到 Windows 那边配置 ReBAR（见第三节）。
+
+> 如果你宁愿用自己板子的 ME 区，最干净的做法是：拿你从精粤官网下的官方 BIOS 当底，跑 `scripts/build_v3.py` 自己生成一份。<br>
+> ⚠️ 本镜像仅对应 **精粤 Z690M Snow Dream D4 + BIOS JYZ6PA08**，不要用在别的板子或其他 BIOS 版本上。
 
 ---
 

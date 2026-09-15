@@ -1,0 +1,5 @@
+# SHA256 checksums
+3a1b903eca781c46e56f5aafde8c0eca793af342f08e6328ff8d9b0ec334a9ba *bios/JYZ6PA08_ReBAR_v3.bin
+
+# MD5 checksums
+4856c9a585a0f27e496cec6428e42a34 *bios/JYZ6PA08_ReBAR_v3.bin
