@@ -25,7 +25,7 @@
 | `tools/` | Windows 端一键脚本：`enable_rebar.bat` / `check_rebar.bat` |
 | `images/` | 实拍图：救砖现场、GPU-Z 验证、发错的夹子 |
 | `bios/` | 我最终刷上并验证可用的那版镜像（整片 16MB，**刷前必读下文**） |
-| `docs/` | 浓缩版文章、ReBAR 恢复操作单 |
+| `docs/` | 浓缩版文章、ReBAR 恢复操作单、**Secure Boot 证书排查手册** |
 
 ### 关于 NvStrapsReBar.exe（未随仓库分发）
 
@@ -380,6 +380,20 @@ AI 排查后的结论是：**撞上了 2026 年 Secure Boot 证书换代。**
 所以我前面说"刷完 BIOS 要重配 ReBAR"就是这个原因——**ReBAR 的配置属于第二类，必丢**；而 Secure Boot 的证书属于第一类，**不用重做**。
 
 我一开始的结论是反的（以为刷 BIOS 会把证书冲掉），后来拿两个证据推翻了自己：原厂镜像里一张新证书都没有，可刷完芯片里却有 4 张；固件内建默认库（`dbDefault`/`KEKDefault`）里也只有 2011 的。**那证书只可能是被"保留"下来的。**
+
+### 4.1+ 2026-11 补充：又一次被 Secure Boot 玩明白了
+
+写完这篇之后，我为了跑一个 GPU 解锁工具把 Secure Boot 关了再开，结果**又黑屏了**——而且连着栽了两次。这次的教训更值钱，单独整理成了一份手册：
+
+**→ [`docs/secure-boot-2023-certs.md`](docs/secure-boot-2023-certs.md)**
+
+三条最关键的：
+
+1. **两类黑屏，病因相反**：缺 `Windows UEFI CA 2023` → 黑屏 + 无限重启；缺 2011 CA → 能进系统但**POST 阶段没有画面**（显卡 GOP 被拦，要等 Windows 驱动起来才有图像）。
+2. **这块板 BIOS 的 Enroll 是"替换"不是"追加"**：装一张 2023，`db` 从 3143 B 掉到 1498 B，两张 2011 被冲掉。想追加只能用 U 盘跑微软的 `SecureBootRecovery.efi`。
+3. **FPT 刷写不会重置 Secure Boot 开关**：我刷了字节级一致的原厂 BIOS，`UEFISecureBootEnabled` 还是 1，黑屏照旧。最后是**编程器整片擦除**才回到干净状态（`SetupMode=1`，密钥库全空）。
+
+另外附了个自检脚本 [`tools/check_sb_state.bat`](tools/check_sb_state.bat)，双击就能看到 `db` 里到底有哪几张证书（比"开 Secure Boot 试错"安全得多）。
 
 ### 4.2 接着又是 Windows 激活失败
 
