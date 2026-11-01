@@ -19,26 +19,24 @@ check_rebar.bat     一键自检：BAR1 窗口 + Secure Boot 状态
 NvStrapsReBar.exe   配置工具本体（v0.3）
 
 
-操作（2 次重启）
+操作（1 次重启 + 1 次配置）
 ----------------------------------------------------------------
-第 1 步  双击 enable_rebar.bat
-         在工具里按：  E   （启用 Turing 自动设置）
-                      S   （保存到固件变量）
-                      Q   （退出）
-         然后【重启】。
+双击 enable_rebar.bat（管理员），然后：
 
-第 2 步  重启后再次双击 enable_rebar.bat
-         先看状态行：应该已经从 Unconfigured 变成
-                     "GPU-side ReBAR Configured ..."
-         按：  P
-               64   （给这块 GPU 单独配 PCI 侧 BAR，输入 64 回车）
-               S
-               Q
-         然后【重启】。
+第 1 步  先【选中你要配的那块显卡】—— 别直接点 E 跳过这一步
 
-第 3 步  双击 check_rebar.bat
+第 2 步  进「手动设置 ReBAR 尺寸」
+
+第 3 步  选 32G（22GB 显存的卡必须 32G，16G 盖不住显存）
+
+第 4 步  按 S 保存 → Q 退出 →【重启】
+
+第 5 步  双击 check_rebar.bat
          期望：BAR1 Total = 32768 MiB  → ReBAR 已开启
          或 GPU-Z → Resizable BAR = Enabled
+
+⚠️ 不要用 E（Turing 自动设置）：它按 2080 Ti 标准档给 16GiB，
+   原厂 11GB 的卡够用，20 系改装 22GB 的卡最多只能开到 16G。
 
 
 如果第 2 步状态行还是 Unconfigured

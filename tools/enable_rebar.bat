@@ -10,32 +10,31 @@ if %errorlevel% neq 0 (
 )
 
 echo ==================================================
-echo   NvStrapsReBar restore - STEP 1 or STEP 2
+echo   NvStrapsReBar configure  (Z690M + 22GB TU102)
 echo ==================================================
 echo.
-echo   ReBAR is lost after every BIOS flash / CMOS clear.
-echo   Run this tool twice, with a REBOOT in between.
+echo   Goal: Target BAR = 32 GiB, save, reboot.
 echo.
-echo   --- STEP 1 (first run) ---
-echo       E   enable Turing auto settings
-echo       S   save to UEFI variable
-echo       Q   quit, then REBOOT
-echo.
-echo   --- STEP 2 (after reboot) ---
-echo       status line should read "GPU-side ReBAR Configured..."
-echo       P   configure PCI side for the GPU
-echo       64  set 64 GB request (board caps it to 32 GiB)
-echo       S   save
-echo       Q   quit, then REBOOT
+echo   Inside the tool:
+echo     1) SELECT YOUR GPU FIRST  -  do NOT just press E
+echo        (E = Turing auto = 16 GiB, too small for 22GB VRAM)
+echo     2) open the MANUAL ReBAR size setting
+echo     3) choose 32G
+echo     4) check the status line shows Target 32 GiB
+echo     5) S   save to UEFI variable
+echo     6) Q   quit, then REBOOT
 echo.
 echo   Then run check_rebar.bat - expect BAR1 Total = 32768 MiB
 echo.
+echo   If there is no "UEFI DXE driver" line at all, the injected
+echo   driver is missing - re-flash JYZ6PA08_ReBAR_v3.bin.
 echo ==================================================
+echo.
 echo   Press any key to launch NvStrapsReBar.exe ...
 pause >nul
 
 NvStrapsReBar.exe
 
 echo.
-echo [*] Tool closed. Remember: REBOOT before verifying.
+echo [*] Tool closed. REBOOT first, then run check_rebar.bat.
 pause
